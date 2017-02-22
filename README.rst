@@ -19,13 +19,14 @@ Usage
 ::
 
     usage: soapy_power [-h] [-f Hz|Hz:Hz] [-b BINS | -B Hz]
-                       [-n REPEATS | -t SECONDS | -T SECONDS] [-d DEVICE] [-r Hz]
-                       [-p PPM] [-o PERCENT | -k PERCENT]
-                       [-c | -u RUNS | -e SECONDS] [-g 1/10th of dB | -a] [-l]
-                       [-s BUFFER_SIZE] [-S MAX_BUFFER_SIZE] [-O FILE]
+                       [-n REPEATS | -t SECONDS | -T SECONDS] [-d DEVICE]
+                       [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM]
+                       [-o PERCENT | -k PERCENT] [-c | -u RUNS | -e SECONDS]
+                       [-g 1/10th of dB | -a] [-l] [-s BUFFER_SIZE]
+                       [-S MAX_BUFFER_SIZE] [-O FILE]
                        [-F {rtl_power,rtl_power_fftw}] [-q] [--debug] [--detect]
                        [--even | --pow2] [--pyfftw] [--tune-delay SECONDS]
-                       [--version]
+                       [--force-rate] [--force-bandwidth] [--version]
     
     obtain a power spectrum from SoapySDR devices
     
