@@ -73,8 +73,14 @@ def setup_argument_parser():
 
     parser.add_argument('-d', '--device', default='',
                         help='SoapySDR device to use')
+    parser.add_argument('-C', '--channel', type=int, default=0,
+                        help='SoapySDR RX channel (default: %(default)s)')
+    parser.add_argument('-A', '--antenna', default='',
+                        help='SoapySDR selected antenna')
     parser.add_argument('-r', '--rate', metavar='Hz', type=float_with_multiplier, default=2e6,
                         help='sample rate (default: %(default)s)')
+    parser.add_argument('-w', '--bandwidth', metavar='Hz', type=float_with_multiplier, default=0,
+                        help='filter bandwidth (default: %(default)s)')
     parser.add_argument('-p', '--ppm', type=int, default=0,
                         help='frequency correction in ppm')
 
@@ -126,6 +132,10 @@ def setup_argument_parser():
                         help='use pyfftw library instead of scipy.fftpack (should be faster)')
     parser.add_argument('--tune-delay', metavar='SECONDS', type=float, default=0,
                         help='time to delay measurement after changing frequency')
+    parser.add_argument('--force-rate', action='store_true',
+                        help='ignore list of sample rates provided by device and allow any value')
+    parser.add_argument('--force-bandwidth', action='store_true',
+                        help='ignore list of filter bandwidths provided by device and allow any value')
 
     parser.add_argument('--version', action='version',
                         version='%(prog)s {}'.format(__version__))
@@ -159,7 +169,7 @@ def main():
 
         logger.info('Detected SoapySDR devices:')
         for i, d in enumerate(devices):
-            logger.info('  {} ... driver={}, label={}'.format(i + 1, d['driver'], d['label']))
+            logger.info('  {} ... driver={}, label={}'.format(i, d['driver'], d['label']))
         sys.exit(0)
 
     # Prepare arguments for SoapyPower
@@ -171,8 +181,10 @@ def main():
 
     # Create SoapyPower instance
     sdr = power.SoapyPower(
-        soapy_args=args.device, sample_rate=args.rate, corr=args.ppm,
-        gain=args.gain, auto_gain=args.agc, output=args.output, output_format=args.format
+        soapy_args=args.device, sample_rate=args.rate, bandwidth=args.bandwidth, corr=args.ppm,
+        gain=args.gain, auto_gain=args.agc, channel=args.channel, antenna=args.antenna,
+        force_sample_rate=args.force_rate, force_bandwidth=args.force_bandwidth,
+        output=args.output, output_format=args.format
     )
     logger.info('Using device: {}'.format(sdr.device.hardware))
 
@@ -184,12 +196,6 @@ def main():
         args.bins = sdr.bin_size_to_bins(args.bin_size)
 
     args.bins = sdr.nearest_bins(args.bins, even=args.even, pow2=args.pow2)
-
-    if args.total_time:
-        args.time = args.total_time / len(sdr.freq_plan(args.freq[0], args.freq[1], args.bins, args.overlap))
-
-    if args.time:
-        args.repeats = sdr.time_to_repeats(args.bins, args.time)
 
     if args.endless:
         args.runs = 0
@@ -206,6 +212,12 @@ def main():
     if args.overlap:
         args.overlap /= 100
         args.overlap = sdr.nearest_overlap(args.overlap, args.bins)
+
+    if args.total_time:
+        args.time = args.total_time / len(sdr.freq_plan(args.freq[0], args.freq[1], args.bins, args.overlap, quiet=True))
+
+    if args.time:
+        args.repeats = sdr.time_to_repeats(args.bins, args.time)
 
     # Start frequency sweep
     sdr.sweep(

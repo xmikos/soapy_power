@@ -15,10 +15,13 @@ array_zeros = numpy.zeros
 class SoapyPower:
     """SoapySDR spectrum analyzer"""
     def __init__(self, soapy_args='', sample_rate=2.00e6, bandwidth=0, corr=0, gain=20.7,
-                 auto_gain=False, output=sys.stdout, output_format='rtl_power_fftw'):
+                 auto_gain=False, channel=0, antenna='',
+                 force_sample_rate=False, force_bandwidth=False,
+                 output=sys.stdout, output_format='rtl_power_fftw'):
         self.device = simplesoapy.SoapyDevice(
             soapy_args=soapy_args, sample_rate=sample_rate, bandwidth=bandwidth, corr=corr,
-            gain=gain, auto_gain=auto_gain
+            gain=gain, auto_gain=auto_gain, channel=channel, antenna=antenna,
+            force_sample_rate=force_sample_rate, force_bandwidth=force_bandwidth
         )
 
         self._buffer = None
@@ -74,7 +77,7 @@ class SoapyPower:
         """Convert number of repeats to integration time"""
         return (repeats * bins) / self.device.sample_rate
 
-    def freq_plan(self, min_freq, max_freq, bins, overlap=0):
+    def freq_plan(self, min_freq, max_freq, bins, overlap=0, quiet=False):
         """Returns list of frequencies for frequency hopping"""
         bin_size = self.bins_to_bin_size(bins)
         bins_crop = round((1 - overlap) * bins)
@@ -89,29 +92,30 @@ class SoapyPower:
 
         freq_list = [min_center_freq + (i * hop_size) for i in range(hops)]
 
-        logger.info('overlap: {:.5f}'.format(overlap))
-        logger.info('bin_size: {:.2f} Hz'.format(bin_size))
-        logger.info('bins: {}'.format(bins))
-        logger.info('bins (after crop): {}'.format(bins_crop))
-        logger.info('sample_rate: {:.3f} MHz'.format(self.device.sample_rate / 1e6))
-        logger.info('sample_rate (after crop): {:.3f} MHz'.format(sample_rate_crop / 1e6))
-        logger.info('freq_range: {:.3f} MHz'.format(freq_range / 1e6))
-        logger.info('hopping: {}'.format('YES' if hopping else 'NO'))
-        logger.info('hop_size: {:.3f} MHz'.format(hop_size / 1e6))
-        logger.info('hops: {}'.format(hops))
-        logger.info('min_center_freq: {:.3f} MHz'.format(min_center_freq / 1e6))
-        logger.info('max_center_freq: {:.3f} MHz'.format(max_center_freq / 1e6))
-        logger.info('min_freq (after crop): {:.3f} MHz'.format((min_center_freq - (hop_size / 2)) / 1e6))
-        logger.info('max_freq (after crop): {:.3f} MHz'.format((max_center_freq + (hop_size / 2)) / 1e6))
+        if not quiet:
+            logger.info('overlap: {:.5f}'.format(overlap))
+            logger.info('bin_size: {:.2f} Hz'.format(bin_size))
+            logger.info('bins: {}'.format(bins))
+            logger.info('bins (after crop): {}'.format(bins_crop))
+            logger.info('sample_rate: {:.3f} MHz'.format(self.device.sample_rate / 1e6))
+            logger.info('sample_rate (after crop): {:.3f} MHz'.format(sample_rate_crop / 1e6))
+            logger.info('freq_range: {:.3f} MHz'.format(freq_range / 1e6))
+            logger.info('hopping: {}'.format('YES' if hopping else 'NO'))
+            logger.info('hop_size: {:.3f} MHz'.format(hop_size / 1e6))
+            logger.info('hops: {}'.format(hops))
+            logger.info('min_center_freq: {:.3f} MHz'.format(min_center_freq / 1e6))
+            logger.info('max_center_freq: {:.3f} MHz'.format(max_center_freq / 1e6))
+            logger.info('min_freq (after crop): {:.3f} MHz'.format((min_center_freq - (hop_size / 2)) / 1e6))
+            logger.info('max_freq (after crop): {:.3f} MHz'.format((max_center_freq + (hop_size / 2)) / 1e6))
 
-        logger.debug('Frequency hops table:')
-        logger.debug('  {:8s}      {:8s}      {:8s}'.format('Min:', 'Center:', 'Max:'))
-        for f in freq_list:
-            logger.debug('  {:8.3f} MHz  {:8.3f} MHz  {:8.3f} MHz'.format(
-                (f - (self.device.sample_rate / 2)) / 1e6,
-                f / 1e6,
-                (f + (self.device.sample_rate / 2)) / 1e6,
-            ))
+            logger.debug('Frequency hops table:')
+            logger.debug('  {:8s}      {:8s}      {:8s}'.format('Min:', 'Center:', 'Max:'))
+            for f in freq_list:
+                logger.debug('  {:8.3f} MHz  {:8.3f} MHz  {:8.3f} MHz'.format(
+                    (f - (self.device.sample_rate / 2)) / 1e6,
+                    f / 1e6,
+                    (f + (self.device.sample_rate / 2)) / 1e6,
+                ))
 
         return freq_list
 
