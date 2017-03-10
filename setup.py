@@ -7,6 +7,7 @@ setup(
     name='soapy_power',
     version=__version__,
     description='Obtain power spectrum from SoapySDR devices (RTL-SDR, Airspy, SDRplay, HackRF, bladeRF, USRP, LimeSDR, etc.)',
+    long_description=open('README.rst').read(),
     author='Michal Krenek (Mikos)',
     author_email='m.krenek@gmail.com',
     url='https://github.com/xmikos/soapy_power',

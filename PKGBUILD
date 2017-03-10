@@ -1,6 +1,6 @@
 # Maintainer: Michal Krenek (Mikos) <m.krenek@gmail.com>
 pkgname=soapy_power
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="Obtain power spectrum from SoapySDR devices (RTL-SDR, Airspy, SDRplay, HackRF, bladeRF, USRP, LimeSDR, etc.)"
 arch=('any')
@@ -19,6 +19,7 @@ optdepends=(
   'soapyredpitaya-git: support for Red Pitaya'
   'soapyosmo-git: support for MiriSDR and RFSpace'
   'soapyremote-git: use any SoapySDR device remotely over network'
+  'python-pyfftw: faster FFT calculations with FFTW library'
 )
 source=(https://github.com/xmikos/soapy_power/archive/v$pkgver.tar.gz)
 

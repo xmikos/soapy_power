@@ -17,7 +17,7 @@ class SoapyPower:
     def __init__(self, soapy_args='', sample_rate=2.00e6, bandwidth=0, corr=0, gain=20.7,
                  auto_gain=False, channel=0, antenna='',
                  force_sample_rate=False, force_bandwidth=False,
-                 output=sys.stdout, output_format='rtl_power_fftw'):
+                 output=sys.stdout, output_format='rtl_power'):
         self.device = simplesoapy.SoapyDevice(
             soapy_args=soapy_args, sample_rate=sample_rate, bandwidth=bandwidth, corr=corr,
             gain=gain, auto_gain=auto_gain, channel=channel, antenna=antenna,
@@ -30,6 +30,8 @@ class SoapyPower:
         self._max_buffer_size = None
         self._bins = None
         self._repeats = None
+        self._tune_delay = None
+        self._psd = None
 
         self._writer = writer.formats[output_format](output)
 
@@ -153,7 +155,8 @@ class SoapyPower:
         return (buffer_repeats, array_zeros(buffer_size, numpy.complex64))
 
     def setup(self, bins, repeats, base_buffer_size=0, max_buffer_size=0,
-              fft_window='hann', fft_overlap=0.5, crop_factor=0, log_scale=True, tune_delay=0):
+              fft_window='hann', fft_overlap=0.5, crop_factor=0, log_scale=True, remove_dc=False,
+              detrend=None, tune_delay=0, max_threads=0, max_queue_size=0):
         """Prepare samples buffer and start streaming samples from device"""
         if self.device.is_streaming:
             self.device.stop_stream()
@@ -168,7 +171,8 @@ class SoapyPower:
         )
         self._tune_delay = tune_delay
         self._psd = psd.PSD(bins, self.device.sample_rate, fft_window=fft_window, fft_overlap=fft_overlap,
-                            crop_factor=crop_factor, log_scale=log_scale)
+                            crop_factor=crop_factor, log_scale=log_scale, remove_dc=remove_dc, detrend=detrend,
+                            max_threads=max_threads, max_queue_size=max_queue_size)
 
     def stop(self):
         """Stop streaming samples from device and delete samples buffer"""
@@ -193,10 +197,13 @@ class SoapyPower:
         # Tune to new frequency in main thread
         logger.debug('  Frequency hop: {:.2f} Hz'.format(freq))
         t_freq = time.time()
-        self.device.freq = freq
-        if self._tune_delay:
-            time.sleep(self._tune_delay)
-        self._psd.set_center_freq_async(freq)
+        if self.device.freq != freq:
+            self.device.freq = freq
+            if self._tune_delay:
+                time.sleep(self._tune_delay)
+        else:
+            logger.debug('    Same frequency as before, tuning skipped')
+        psd_state = self._psd.set_center_freq(freq)
         t_freq_end = time.time()
         logger.debug('    Tune time: {:.3f} s'.format(t_freq_end - t_freq))
 
@@ -211,20 +218,24 @@ class SoapyPower:
             logger.debug('      Acquisition time: {:.3f} s'.format(t_acq_end - t_acq))
 
             # Start FFT computation in another thread
-            psd_future = self._psd.update_async(numpy.copy(self._buffer))
+            self._psd.update_async(psd_state, numpy.copy(self._buffer))
 
             t_final = time.time()
             logger.debug('      FFT time: {:.3f} s'.format(t_final - t_acq_end))
+        psd_future = self._psd.result_async(psd_state)
         logger.debug('    Total hop time: {:.3f} s'.format(t_final - t_freq))
 
         return (psd_future, acq_time_start, acq_time_stop)
 
-    def sweep(self, min_freq, max_freq, bins, repeats, runs=0, time_limit=0, overlap=0, crop=False,
-              log_scale=True, tune_delay=0, base_buffer_size=0, max_buffer_size=0):
+    def sweep(self, min_freq, max_freq, bins, repeats, runs=0, time_limit=0, overlap=0,
+              fft_window='hann', fft_overlap=0.5, crop=False, log_scale=True, remove_dc=False, detrend=None,
+              tune_delay=0, base_buffer_size=0, max_buffer_size=0, max_threads=0, max_queue_size=0):
         """Sweep spectrum using frequency hopping"""
         self.setup(
             bins, repeats, base_buffer_size, max_buffer_size,
-            crop_factor=overlap if crop else 0, log_scale=log_scale, tune_delay=tune_delay
+            fft_window=fft_window, fft_overlap=fft_overlap,
+            crop_factor=overlap if crop else 0, log_scale=log_scale, remove_dc=remove_dc, detrend=detrend,
+            tune_delay=tune_delay, max_threads=max_threads, max_queue_size=max_queue_size
         )
         freq_list = self.freq_plan(min_freq, max_freq, bins, overlap)
 
@@ -243,7 +254,7 @@ class SoapyPower:
                 self._writer.write_async(psd_future, acq_time_start, acq_time_stop, len(self._buffer))
 
             # Write end of measurement marker (in another thread)
-            self._writer.write_next_async()
+            write_next_future = self._writer.write_next_async()
             t_run = time.time()
             logger.debug('  Total run time: {:.3f} s'.format(t_run - t_run_start))
 
@@ -251,6 +262,18 @@ class SoapyPower:
             if time_limit and (time.time() - t_start) >= time_limit:
                 logger.info('Time limit of {} s exceeded, completed {} runs'.format(time_limit, run))
                 break
+
+        # Wait for last write to be finished
+        write_next_future.result()
+
+        # Debug thread pool queues
+        logging.debug('Number of USB buffer overflow errors: {}'.format(self.device.buffer_overflow_count))
+        logging.debug('PSD worker threads: {}'.format(self._psd._executor._max_workers))
+        logging.debug('Max. PSD queue size: {} / {}'.format(self._psd._executor.max_queue_size_reached,
+                                                            self._psd._executor.max_queue_size))
+        logging.debug('Writer worker threads: {}'.format(self._writer._executor._max_workers))
+        logging.debug('Max. Writer queue size: {} / {}'.format(self._writer._executor.max_queue_size_reached,
+                                                               self._writer._executor.max_queue_size))
 
         # Shutdown SDR
         self.stop()

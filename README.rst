@@ -3,50 +3,61 @@ soapy_power
 
 Obtain power spectrum from SoapySDR devices (RTL-SDR, Airspy, SDRplay, HackRF, bladeRF, USRP, LimeSDR, etc.)
 
-WARNING
--------
-
-**This is still work in progress, soapy_power doesn't work as supposed yet.**
-
 Requirements
 ------------
 
-- Python 3
-- simplesoapy (https://github.com/xmikos/simplesoapy)
+- `Python 3 <https://www.python.org>`_
+- `SimpleSoapy <https://github.com/xmikos/simplesoapy>`_
+- Optional: `pyFFTW <https://github.com/pyFFTW/pyFFTW>`_ (for faster FFT calculations with FFTW library)
 
 Usage
 -----
 ::
 
-    usage: soapy_power [-h] [-f Hz|Hz:Hz] [-b BINS | -B Hz]
-                       [-n REPEATS | -t SECONDS | -T SECONDS] [-d DEVICE]
-                       [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM]
-                       [-o PERCENT | -k PERCENT] [-c | -u RUNS | -e SECONDS]
-                       [-g 1/10th of dB | -a] [-l] [-s BUFFER_SIZE]
-                       [-S MAX_BUFFER_SIZE] [-O FILE]
-                       [-F {rtl_power,rtl_power_fftw}] [-q] [--debug] [--detect]
-                       [--even | --pow2] [--pyfftw] [--tune-delay SECONDS]
-                       [--force-rate] [--force-bandwidth] [--version]
+    usage: soapy_power [-h] [-f Hz|Hz:Hz] [-O FILE] [-F {rtl_power,rtl_power_fftw,soapy_power_bin}] [-q] [--debug] [--detect]
+                       [--version] [-b BINS | -B Hz] [-n REPEATS | -t SECONDS | -T SECONDS] [-c | -u RUNS | -e SECONDS]
+                       [-d DEVICE] [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM] [-g 1/10th of dB | -a] [--force-rate]
+                       [--force-bandwidth] [--tune-delay SECONDS] [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE]
+                       [-S MAX_BUFFER_SIZE] [--even | --pow2] [--pyfftw] [--max-threads NUM] [--max-queue-size NUM] [-l] [-R]
+                       [-D {no,constant,linear}]
+                       [--fft-window {boxcar,hann,hamming,triang,blackman,bartlett,flattop,parzen,bohman,blackmanharris,nuttall,barthann}]
+                       [--fft-overlap PERCENT]
     
-    obtain a power spectrum from SoapySDR devices
+    Obtain a power spectrum from SoapySDR devices
     
-    optional arguments:
+    Main options:
       -h, --help            show this help message and exit
       -f Hz|Hz:Hz, --freq Hz|Hz:Hz
-                            center frequency or frequency range to scan, number
-                            can be followed by a k, M or G multiplier (default:
-                            1420405752)
-      -b BINS, --bins BINS  number of FFT bins (incompatible with -B, default:
-                            512)
+                            center frequency or frequency range to scan, number can be followed by a k, M or G multiplier
+                            (default: 1420405752)
+      -O FILE, --output FILE
+                            output to file (default is stdout)
+      -F {rtl_power,rtl_power_fftw,soapy_power_bin}, --format {rtl_power,rtl_power_fftw,soapy_power_bin}
+                            output format (default: rtl_power)
+      -q, --quiet           limit verbosity
+      --debug               detailed debugging messages
+      --detect              detect connected SoapySDR devices and exit
+      --version             show program's version number and exit
+    
+    FFT bins:
+      -b BINS, --bins BINS  number of FFT bins (incompatible with -B, default: 512)
       -B Hz, --bin-size Hz  bin size in Hz (incompatible with -b)
+    
+    Averaging:
       -n REPEATS, --repeats REPEATS
-                            number of spectra to average (incompatible with -t and
-                            -T, default: 1600)
+                            number of spectra to average (incompatible with -t and -T, default: 1600)
       -t SECONDS, --time SECONDS
                             integration time (incompatible with -T and -n)
       -T SECONDS, --total-time SECONDS
-                            total integration time of all hops (incompatible with
-                            -t and -n)
+                            total integration time of all hops (incompatible with -t and -n)
+    
+    Measurements:
+      -c, --continue        repeat the measurement endlessly (incompatible with -u and -e)
+      -u RUNS, --runs RUNS  number of measurements (incompatible with -c and -e, default: 1)
+      -e SECONDS, --elapsed SECONDS
+                            scan session duration (time limit in seconds, incompatible with -c and -u)
+    
+    Device settings:
       -d DEVICE, --device DEVICE
                             SoapySDR device to use
       -C CHANNEL, --channel CHANNEL
@@ -57,47 +68,39 @@ Usage
       -w Hz, --bandwidth Hz
                             filter bandwidth (default: 0)
       -p PPM, --ppm PPM     frequency correction in ppm
-      -o PERCENT, --overlap PERCENT
-                            percent of overlap when frequency hopping
-                            (incompatible with -k)
-      -k PERCENT, --crop PERCENT
-                            percent of crop when frequency hopping (incompatible
-                            with -o)
-      -c, --continue        repeat the measurement endlessly (incompatible with
-                            -u)
-      -u RUNS, --runs RUNS  number of measurements (incompatible with -c, default:
-                            1)
-      -e SECONDS, --elapsed SECONDS
-                            scan session duration (time limit in seconds,
-                            incompatible with -c and -u)
       -g 1/10th of dB, --gain 1/10th of dB
-                            gain, expressed in tenths of a decibel, e.g. 207 means
-                            20.7 dB (incompatible with -a, default: 372)
+                            gain, expressed in tenths of a decibel, e.g. 207 means 20.7 dB (incompatible with -a, default: 372)
       -a, --agc             enable Automatic Gain Control (incompatible with -g)
-      -l, --linear          linear power values instead of logarithmic
+      --force-rate          ignore list of sample rates provided by device and allow any value
+      --force-bandwidth     ignore list of filter bandwidths provided by device and allow any value
+      --tune-delay SECONDS  time to delay measurement after changing frequency
+    
+    Crop:
+      -o PERCENT, --overlap PERCENT
+                            percent of overlap when frequency hopping (incompatible with -k)
+      -k PERCENT, --crop PERCENT
+                            percent of crop when frequency hopping (incompatible with -o)
+    
+    Performance options:
       -s BUFFER_SIZE, --buffer-size BUFFER_SIZE
-                            base buffer size (number of samples, 0 = auto,
-                            default: 0)
+                            base buffer size (number of samples, 0 = auto, default: 0)
       -S MAX_BUFFER_SIZE, --max-buffer-size MAX_BUFFER_SIZE
-                            maximum buffer size (number of samples, -1 =
-                            unlimited, 0 = auto, default: 0)
-      -O FILE, --output FILE
-                            output to file (default is stdout)
-      -F {rtl_power,rtl_power_fftw}, --format {rtl_power,rtl_power_fftw}
-                            output format (default: rtl_power_fftw)
-      -q, --quiet           limit verbosity
-      --debug               detailed debugging messages
-      --detect              detect connected SoapySDR devices and exit
+                            maximum buffer size (number of samples, -1 = unlimited, 0 = auto, default: 0)
       --even                use only even numbers of FFT bins
       --pow2                use only powers of 2 as number of FFT bins
-      --pyfftw              use pyfftw library instead of scipy.fftpack (should be
-                            faster)
-      --tune-delay SECONDS  time to delay measurement after changing frequency
-      --force-rate          ignore list of sample rates provided by device and
-                            allow any value
-      --force-bandwidth     ignore list of filter bandwidths provided by device
-                            and allow any value
-      --version             show program's version number and exit
+      --pyfftw              use pyfftw library instead of scipy.fftpack (should be faster)
+      --max-threads NUM     maximum number of FFT threads (0 = auto, default: 0)
+      --max-queue-size NUM  maximum size of FFT work queue (-1 = unlimited, 0 = auto, default: 0)
+    
+    Other options:
+      -l, --linear          linear power values instead of logarithmic
+      -R, --remove-dc       interpolate central point to cancel DC bias (useful only with boxcar window)
+      -D {no,constant,linear}, --detrend {no,constant,linear}
+                            remove mean value or linear trend from data (default: no)
+      --fft-window {boxcar,hann,hamming,triang,blackman,bartlett,flattop,parzen,bohman,blackmanharris,nuttall,barthann}
+                            Welch's method window function (default: hann)
+      --fft-overlap PERCENT
+                            Welch's method overlap between segments (default: 50)
 
 Example
 -------
