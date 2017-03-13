@@ -7,6 +7,7 @@ Requirements
 ------------
 
 - `Python 3 <https://www.python.org>`_
+- `SciPy <https://github.com/scipy/scipy>`_
 - `SimpleSoapy <https://github.com/xmikos/simplesoapy>`_
 - Optional: `pyFFTW <https://github.com/pyFFTW/pyFFTW>`_ (for faster FFT calculations with FFTW library)
 
@@ -14,12 +15,12 @@ Usage
 -----
 ::
 
-    usage: soapy_power [-h] [-f Hz|Hz:Hz] [-O FILE] [-F {rtl_power,rtl_power_fftw,soapy_power_bin}] [-q] [--debug] [--detect]
-                       [--version] [-b BINS | -B Hz] [-n REPEATS | -t SECONDS | -T SECONDS] [-c | -u RUNS | -e SECONDS]
-                       [-d DEVICE] [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM] [-g 1/10th of dB | -a] [--force-rate]
-                       [--force-bandwidth] [--tune-delay SECONDS] [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE]
-                       [-S MAX_BUFFER_SIZE] [--even | --pow2] [--pyfftw] [--max-threads NUM] [--max-queue-size NUM] [-l] [-R]
-                       [-D {no,constant,linear}]
+    usage: soapy_power [-h] [-f Hz|Hz:Hz] [-O FILE | --output-fd NUM] [-F {rtl_power,rtl_power_fftw,soapy_power_bin}] [-q]
+                       [--debug] [--detect] [--version] [-b BINS | -B Hz] [-n REPEATS | -t SECONDS | -T SECONDS]
+                       [-c | -u RUNS | -e SECONDS] [-d DEVICE] [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM]
+                       [-g 1/10th of dB | -a] [--force-rate] [--force-bandwidth] [--tune-delay SECONDS]
+                       [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE] [-S MAX_BUFFER_SIZE] [--even | --pow2] [--pyfftw]
+                       [--max-threads NUM] [--max-queue-size NUM] [-l] [-R] [-D {no,constant,linear}]
                        [--fft-window {boxcar,hann,hamming,triang,blackman,bartlett,flattop,parzen,bohman,blackmanharris,nuttall,barthann}]
                        [--fft-overlap PERCENT]
     
@@ -31,7 +32,8 @@ Usage
                             center frequency or frequency range to scan, number can be followed by a k, M or G multiplier
                             (default: 1420405752)
       -O FILE, --output FILE
-                            output to file (default is stdout)
+                            output to file (incompatible with --output-fd, default is stdout)
+      --output-fd NUM       output to existing file descriptor (incompatible with -O)
       -F {rtl_power,rtl_power_fftw,soapy_power_bin}, --format {rtl_power,rtl_power_fftw,soapy_power_bin}
                             output format (default: rtl_power)
       -q, --quiet           limit verbosity

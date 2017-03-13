@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys, time, datetime, math, logging
+import sys, time, datetime, math, logging, signal
 
 import simplesoapy
 import numpy
@@ -10,6 +10,18 @@ from soapypower import psd, writer
 logger = logging.getLogger(__name__)
 array_empty = numpy.empty
 array_zeros = numpy.zeros
+_shutdown = False
+
+
+def _shutdown_handler(sig, frame):
+    """Set global _shutdown flag when receiving SIGTERM or SIGINT signals"""
+    global _shutdown
+    _shutdown = True
+
+
+# Register signals with _shutdown_handler
+signal.signal(signal.SIGTERM, _shutdown_handler)
+signal.signal(signal.SIGINT, _shutdown_handler)
 
 
 class SoapyPower:
@@ -24,6 +36,9 @@ class SoapyPower:
             force_sample_rate=force_sample_rate, force_bandwidth=force_bandwidth
         )
 
+        self._output = output
+        self._output_format = output_format
+
         self._buffer = None
         self._buffer_repeats = None
         self._base_buffer_size = None
@@ -32,8 +47,7 @@ class SoapyPower:
         self._repeats = None
         self._tune_delay = None
         self._psd = None
-
-        self._writer = writer.formats[output_format](output)
+        self._writer = None
 
     def nearest_freq(self, freq, bin_size):
         """Return nearest frequency based on bin size"""
@@ -128,7 +142,9 @@ class SoapyPower:
         buffer_size = math.ceil(samples / base_buffer_size) * base_buffer_size
 
         if not max_buffer_size:
-            max_buffer_size = base_buffer_size * 100
+            # Max buffer size about 250 MB (this gives us max. memory usage about 2.1 GB
+            # when not using pyfftw and about 3.6 GB if using pyfftw and 4 threads)
+            max_buffer_size = (250 * 1024**2) / 8
 
         if max_buffer_size > 0:
             max_buffer_size = math.ceil(max_buffer_size / base_buffer_size) * base_buffer_size
@@ -173,6 +189,7 @@ class SoapyPower:
         self._psd = psd.PSD(bins, self.device.sample_rate, fft_window=fft_window, fft_overlap=fft_overlap,
                             crop_factor=crop_factor, log_scale=log_scale, remove_dc=remove_dc, detrend=detrend,
                             max_threads=max_threads, max_queue_size=max_queue_size)
+        self._writer = writer.formats[self._output_format](self._output)
 
     def stop(self):
         """Stop streaming samples from device and delete samples buffer"""
@@ -180,6 +197,8 @@ class SoapyPower:
             return
 
         self.device.stop_stream()
+        self._writer.close()
+
         self._bins = None
         self._repeats = None
         self._base_buffer_size = None
@@ -188,6 +207,7 @@ class SoapyPower:
         self._buffer = None
         self._tune_delay = None
         self._psd = None
+        self._writer = None
 
     def psd(self, freq):
         """Tune to specified center frequency and compute Power Spectral Density"""
@@ -208,6 +228,9 @@ class SoapyPower:
         logger.debug('    Tune time: {:.3f} s'.format(t_freq_end - t_freq))
 
         for repeat in range(self._buffer_repeats):
+            if _shutdown:
+                break
+
             logger.debug('    Repeat: {}'.format(repeat + 1))
             # Read samples from SDR in main thread
             t_acq = time.time()
@@ -237,45 +260,49 @@ class SoapyPower:
             crop_factor=overlap if crop else 0, log_scale=log_scale, remove_dc=remove_dc, detrend=detrend,
             tune_delay=tune_delay, max_threads=max_threads, max_queue_size=max_queue_size
         )
-        freq_list = self.freq_plan(min_freq, max_freq, bins, overlap)
 
-        t_start = time.time()
-        run = 0
-        while (runs == 0 or run < runs):
-            run += 1
-            t_run_start = time.time()
-            logger.debug('Run: {}'.format(run))
+        try:
+            freq_list = self.freq_plan(min_freq, max_freq, bins, overlap)
+            t_start = time.time()
+            run = 0
+            while not _shutdown and (runs == 0 or run < runs):
+                run += 1
+                t_run_start = time.time()
+                logger.debug('Run: {}'.format(run))
 
-            for freq in freq_list:
-                # Tune to new frequency, acquire samples and compute Power Spectral Density
-                psd_future, acq_time_start, acq_time_stop = self.psd(freq)
+                for freq in freq_list:
+                    if _shutdown:
+                        break
 
-                # Write PSD to stdout (in another thread)
-                self._writer.write_async(psd_future, acq_time_start, acq_time_stop, len(self._buffer))
+                    # Tune to new frequency, acquire samples and compute Power Spectral Density
+                    psd_future, acq_time_start, acq_time_stop = self.psd(freq)
 
-            # Write end of measurement marker (in another thread)
-            write_next_future = self._writer.write_next_async()
-            t_run = time.time()
-            logger.debug('  Total run time: {:.3f} s'.format(t_run - t_run_start))
+                    # Write PSD to stdout (in another thread)
+                    self._writer.write_async(psd_future, acq_time_start, acq_time_stop, len(self._buffer))
 
-            # End measurement if time limit is exceeded
-            if time_limit and (time.time() - t_start) >= time_limit:
-                logger.info('Time limit of {} s exceeded, completed {} runs'.format(time_limit, run))
-                break
+                # Write end of measurement marker (in another thread)
+                write_next_future = self._writer.write_next_async()
+                t_run = time.time()
+                logger.debug('  Total run time: {:.3f} s'.format(t_run - t_run_start))
 
-        # Wait for last write to be finished
-        write_next_future.result()
+                # End measurement if time limit is exceeded
+                if time_limit and (time.time() - t_start) >= time_limit:
+                    logger.info('Time limit of {} s exceeded, completed {} runs'.format(time_limit, run))
+                    break
 
-        # Debug thread pool queues
-        logging.debug('Number of USB buffer overflow errors: {}'.format(self.device.buffer_overflow_count))
-        logging.debug('PSD worker threads: {}'.format(self._psd._executor._max_workers))
-        logging.debug('Max. PSD queue size: {} / {}'.format(self._psd._executor.max_queue_size_reached,
-                                                            self._psd._executor.max_queue_size))
-        logging.debug('Writer worker threads: {}'.format(self._writer._executor._max_workers))
-        logging.debug('Max. Writer queue size: {} / {}'.format(self._writer._executor.max_queue_size_reached,
-                                                               self._writer._executor.max_queue_size))
+            # Wait for last write to be finished
+            write_next_future.result()
 
-        # Shutdown SDR
-        self.stop()
-        t_stop = time.time()
-        logger.info('Total time: {:.3f} s'.format(t_stop - t_start))
+            # Debug thread pool queues
+            logging.debug('Number of USB buffer overflow errors: {}'.format(self.device.buffer_overflow_count))
+            logging.debug('PSD worker threads: {}'.format(self._psd._executor._max_workers))
+            logging.debug('Max. PSD queue size: {} / {}'.format(self._psd._executor.max_queue_size_reached,
+                                                                self._psd._executor.max_queue_size))
+            logging.debug('Writer worker threads: {}'.format(self._writer._executor._max_workers))
+            logging.debug('Max. Writer queue size: {} / {}'.format(self._writer._executor.max_queue_size_reached,
+                                                                   self._writer._executor.max_queue_size))
+        finally:
+            # Shutdown SDR
+            self.stop()
+            t_stop = time.time()
+            logger.info('Total time: {:.3f} s'.format(t_stop - t_start))

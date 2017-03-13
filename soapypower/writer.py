@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
-import sys, logging, struct, collections
+import sys, logging, struct, collections, io
 
 import numpy
 
 from soapypower import threadpool
+
+if sys.platform == 'win32':
+    import msvcrt
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +15,20 @@ logger = logging.getLogger(__name__)
 class BaseWriter:
     """Power Spectral Density writer base class"""
     def __init__(self, output=sys.stdout):
-        self.output = output
+        self._close_output = False
+
+        # If output is integer, assume it is file descriptor and open it
+        if isinstance(output, int):
+            self._close_output = True
+            if sys.platform == 'win32':
+                output = msvcrt.open_osfhandle(output, 0)
+            output = open(output, 'wb')
+
+        # Get underlying buffered file object
+        try:
+            self.output = output.buffer
+        except AttributeError:
+            self.output = output
 
         # Use only one writer thread to preserve sequence of written frequencies
         self._executor = threadpool.ThreadPoolExecutor(
@@ -36,6 +52,11 @@ class BaseWriter:
     def write_next_async(self):
         """Write marker for next run of measurement (asynchronously in another thread)"""
         return self._executor.submit(self.write_next)
+
+    def close(self):
+        """Close output (only if it has been opened by writer)"""
+        if self._close_output:
+            self.output.close()
 
 
 class SoapyPowerBinFormat:
@@ -65,8 +86,8 @@ class SoapyPowerBinFormat:
         f.write(
             self.header_struct.pack(self.version, timestamp, start, stop, step, samples, pwr_array.nbytes)
         )
-        pwr_array.tofile(f)
-        #f.write(pwr_array.tostring())
+        #pwr_array.tofile(f)
+        f.write(pwr_array.tobytes())
         f.flush()
 
     def header_size(self):
@@ -78,13 +99,6 @@ class SoapyPowerBinWriter(BaseWriter):
     """Write Power Spectral Density to stdout or file (in soapy_power binary format)"""
     def __init__(self, output=sys.stdout):
         super().__init__(output=output)
-
-        # Get underlying raw file object
-        try:
-            self.output = output.buffer.raw
-        except AttributeError:
-            self.output = output
-
         self.formatter = SoapyPowerBinFormat()
 
     def write(self, psd_data_or_future, time_start, time_stop, samples):
@@ -107,7 +121,7 @@ class SoapyPowerBinWriter(BaseWriter):
                 pwr_array
             )
         except Exception as e:
-            logging.exception('Error writing to output file:')
+            logging.exception('Error writing to output file: {}'.format(e))
 
     def write_next(self):
         """Write marker for next run of measurement"""
@@ -116,6 +130,10 @@ class SoapyPowerBinWriter(BaseWriter):
 
 class RtlPowerFftwWriter(BaseWriter):
     """Write Power Spectral Density to stdout or file (in rtl_power_fftw format)"""
+    def __init__(self, output=sys.stdout):
+        super().__init__(output=output)
+        self.output = io.TextIOWrapper(self.output)
+
     def write(self, psd_data_or_future, time_start, time_stop, samples):
         """Write PSD of one frequency hop"""
         try:
@@ -144,6 +162,10 @@ class RtlPowerFftwWriter(BaseWriter):
 
 class RtlPowerWriter(BaseWriter):
     """Write Power Spectral Density to stdout or file (in rtl_power format)"""
+    def __init__(self, output=sys.stdout):
+        super().__init__(output=output)
+        self.output = io.TextIOWrapper(self.output)
+
     def write(self, psd_data_or_future, time_start, time_stop, samples):
         """Write PSD of one frequency hop"""
         try:

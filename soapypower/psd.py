@@ -72,6 +72,10 @@ class PSD:
         """Return freqs and averaged PSD for given center frequency (asynchronously in another thread)"""
         return self._executor.submit(self.wait_for_result, psd_state)
 
+    def _release_future_memory(self, future):
+        """Remove result from future to release memory"""
+        future._result = None
+
     def update(self, psd_state, samples_array):
         """Compute PSD from samples and update average for given center frequency"""
         freq_array, pwr_array = scipy.signal.welch(samples_array, self._sample_rate, nperseg=self._bins,
@@ -91,5 +95,6 @@ class PSD:
     def update_async(self, psd_state, samples_array):
         """Compute PSD from samples and update average for given center frequency (asynchronously in another thread)"""
         future = self._executor.submit(self.update, psd_state, samples_array)
+        future.add_done_callback(self._release_future_memory)
         psd_state['futures'].append(future)
         return future

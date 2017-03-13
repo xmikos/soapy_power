@@ -78,8 +78,13 @@ def setup_argument_parser():
     main_title.add_argument('-f', '--freq', metavar='Hz|Hz:Hz', type=freq_or_freq_range, default='1420405752',
                             help='center frequency or frequency range to scan, number '
                             'can be followed by a k, M or G multiplier (default: %(default)s)')
-    main_title.add_argument('-O', '--output', metavar='FILE', type=argparse.FileType('w'), default=sys.stdout,
-                            help='output to file (default is stdout)')
+
+    output_group = main_title.add_mutually_exclusive_group()
+    output_group.add_argument('-O', '--output', metavar='FILE', type=argparse.FileType('w'), default=sys.stdout,
+                              help='output to file (incompatible with --output-fd, default is stdout)')
+    output_group.add_argument('--output-fd', metavar='NUM', type=int, default=None,
+                              help='output to existing file descriptor (incompatible with -O)')
+
     main_title.add_argument('-F', '--format', choices=sorted(writer.formats.keys()), default='rtl_power',
                             help='output format (default: %(default)s)')
     main_title.add_argument('-q', '--quiet', action='store_true',
@@ -222,7 +227,8 @@ def main():
         soapy_args=args.device, sample_rate=args.rate, bandwidth=args.bandwidth, corr=args.ppm,
         gain=args.gain, auto_gain=args.agc, channel=args.channel, antenna=args.antenna,
         force_sample_rate=args.force_rate, force_bandwidth=args.force_bandwidth,
-        output=args.output, output_format=args.format
+        output=args.output_fd if args.output_fd is not None else args.output,
+        output_format=args.format
     )
     logger.info('Using device: {}'.format(sdr.device.hardware))
 
