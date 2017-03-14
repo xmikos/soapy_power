@@ -220,7 +220,13 @@ class SoapyPower:
         if self.device.freq != freq:
             self.device.freq = freq
             if self._tune_delay:
-                time.sleep(self._tune_delay)
+                t_delay = time.time()
+                while True:
+                    self.device.read_stream()
+                    t_delay_end = time.time()
+                    if t_delay_end - t_delay >= self._tune_delay:
+                        break
+                logger.debug('    Tune delay: {:.3f} s'.format(t_delay_end - t_delay))
         else:
             logger.debug('    Same frequency as before, tuning skipped')
         psd_state = self._psd.set_center_freq(freq)
