@@ -284,7 +284,8 @@ class SoapyPower:
                     psd_future, acq_time_start, acq_time_stop = self.psd(freq)
 
                     # Write PSD to stdout (in another thread)
-                    self._writer.write_async(psd_future, acq_time_start, acq_time_stop, len(self._buffer))
+                    self._writer.write_async(psd_future, acq_time_start, acq_time_stop,
+                                             len(self._buffer) * self._buffer_repeats)
 
                 # Write end of measurement marker (in another thread)
                 write_next_future = self._writer.write_next_async()

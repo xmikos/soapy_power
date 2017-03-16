@@ -61,10 +61,10 @@ class BaseWriter:
 
 class SoapyPowerBinFormat:
     """Power Spectral Density binary file format"""
-    header_struct = struct.Struct('<BddddQQ10x')
-    header = collections.namedtuple('Header', 'version timestamp start stop step samples size')
+    header_struct = struct.Struct('<BdddddQQ2x')
+    header = collections.namedtuple('Header', 'version time_start time_stop start stop step samples size')
     magic = b'SDRFF'
-    version = 1
+    version = 2
 
     def read(self, f):
         """Read data from file-like object"""
@@ -80,12 +80,12 @@ class SoapyPowerBinFormat:
         pwr_array = numpy.fromstring(f.read(header.size), dtype='float32')
         return (header, pwr_array)
 
-    def write(self, f, timestamp, start, stop, step, samples, pwr_array):
+    def write(self, f, time_start, time_stop, start, stop, step, samples, pwr_array):
         """Write data to file-like object"""
         f.write(self.magic)
-        f.write(
-            self.header_struct.pack(self.version, timestamp, start, stop, step, samples, pwr_array.nbytes)
-        )
+        f.write(self.header_struct.pack(
+            self.version, time_start, time_stop, start, stop, step, samples, pwr_array.nbytes
+        ))
         #pwr_array.tofile(f)
         f.write(pwr_array.tobytes())
         f.flush()
@@ -113,6 +113,7 @@ class SoapyPowerBinWriter(BaseWriter):
             step = f_array[1] - f_array[0]
             self.formatter.write(
                 self.output,
+                time_start.timestamp(),
                 time_stop.timestamp(),
                 f_array[0],
                 f_array[-1] + step,
