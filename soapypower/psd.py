@@ -3,9 +3,9 @@
 import math, logging, threading, concurrent.futures
 
 import numpy
-import scipy.signal
 
 from soapypower import threadpool
+from soapypower import spectral
 
 logger = logging.getLogger(__name__)
 
@@ -78,9 +78,9 @@ class PSD:
 
     def update(self, psd_state, samples_array):
         """Compute PSD from samples and update average for given center frequency"""
-        freq_array, pwr_array = scipy.signal.welch(samples_array, self._sample_rate, nperseg=self._bins,
-                                                   window=self._fft_window, noverlap=self._fft_overlap_bins,
-                                                   detrend=self._detrend)
+        freq_array, pwr_array = spectral.welch(samples_array, self._sample_rate, nperseg=self._bins,
+                                               window=self._fft_window, noverlap=self._fft_overlap_bins,
+                                               detrend=self._detrend)
 
         if self._remove_dc:
             pwr_array[0] = (pwr_array[1] + pwr_array[-1]) / 2

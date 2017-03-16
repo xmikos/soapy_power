@@ -12,17 +12,18 @@ multipliers = {'k': 1e3, 'M': 1e6, 'G': 1e9, 'T': 1e12}
 
 
 def use_pyfftw():
-    """Import pyfftw (if it is available) and monkey patch scipy.fftpack"""
+    """Import pyfftw (if it is available) and monkey patch numpy.fft"""
     try:
-        import pyfftw, scipy, scipy.signal
+        import pyfftw
         power.array_empty = pyfftw.empty_aligned
         power.array_zeros = pyfftw.zeros_aligned
-        scipy.fftpack = pyfftw.interfaces.scipy_fftpack
-        scipy.signal.spectral.fftpack = pyfftw.interfaces.scipy_fftpack
+        power.numpy.fft = pyfftw.interfaces.numpy_fft
+        power.psd.numpy.fft = pyfftw.interfaces.numpy_fft
+        power.psd.spectral.numpy.fft = pyfftw.interfaces.numpy_fft
         pyfftw.interfaces.cache.enable()
         pyfftw.interfaces.cache.set_keepalive_time(3600)
     except ImportError:
-        logger.warning('pyfftw is not available, using scipy.fftpack instead')
+        logger.warning('pyfftw is not available, using numpy.fft instead')
 
 
 def float_with_multiplier(string):
@@ -171,7 +172,7 @@ def setup_argument_parser():
                                  help='use only powers of 2 as number of FFT bins')
 
     perf_title.add_argument('--pyfftw', action='store_true',
-                            help='use pyfftw library instead of scipy.fftpack (should be faster)')
+                            help='use pyfftw library instead of numpy.fft (should be faster)')
     perf_title.add_argument('--max-threads', metavar='NUM', type=int, default=0,
                             help='maximum number of FFT threads (0 = auto, default: %(default)s)')
     perf_title.add_argument('--max-queue-size', metavar='NUM', type=int, default=0,
@@ -182,11 +183,12 @@ def setup_argument_parser():
                              help='linear power values instead of logarithmic')
     other_title.add_argument('-R', '--remove-dc', action='store_true',
                              help='interpolate central point to cancel DC bias (useful only with boxcar window)')
-    other_title.add_argument('-D', '--detrend', choices=['no', 'constant', 'linear'], default='no',
-                             help='remove mean value or linear trend from data (default: %(default)s)')
-    other_title.add_argument('--fft-window', choices=['boxcar', 'hann', 'hamming', 'triang', 'blackman', 'bartlett',
-                                                      'flattop', 'parzen', 'bohman', 'blackmanharris', 'nuttall', 'barthann'],
+    other_title.add_argument('-D', '--detrend', choices=['none', 'constant'], default='none',
+                             help='remove mean value from data to cancel DC bias (default: %(default)s)')
+    other_title.add_argument('--fft-window', choices=['boxcar', 'hann', 'hamming', 'blackman', 'bartlett', 'kaiser', 'tukey'],
                              default='hann', help='Welch\'s method window function (default: %(default)s)')
+    other_title.add_argument('--fft-window-param', metavar='FLOAT', type=float, default=None,
+                             help='shape parameter of window function (required for kaiser and tukey windows)')
     other_title.add_argument('--fft-overlap', metavar='PERCENT', type=float, default=50,
                              help='Welch\'s method overlap between segments (default: %(default)s)')
 
@@ -223,6 +225,11 @@ def main():
 
     if args.gain:
         args.gain /= 10
+
+    if args.fft_window in ('kaiser', 'tukey'):
+        if args.fft_window_param is None:
+            parser.error('argument --fft-window: --fft-window-param is required when using kaiser or tukey windows')
+        args.fft_window = (args.fft_window, args.fft_window_param)
 
     # Create SoapyPower instance
     sdr = power.SoapyPower(
@@ -270,7 +277,7 @@ def main():
         args.freq[0], args.freq[1], args.bins, args.repeats,
         runs=args.runs, time_limit=args.elapsed, overlap=args.overlap, crop=args.crop,
         fft_window=args.fft_window, fft_overlap=args.fft_overlap / 100, log_scale=not args.linear,
-        remove_dc=args.remove_dc, detrend=args.detrend if args.detrend != 'no' else None,
+        remove_dc=args.remove_dc, detrend=args.detrend if args.detrend != 'none' else None,
         tune_delay=args.tune_delay, reset_stream=args.reset_stream,
         base_buffer_size=args.buffer_size, max_buffer_size=args.max_buffer_size,
         max_threads=args.max_threads, max_queue_size=args.max_queue_size
