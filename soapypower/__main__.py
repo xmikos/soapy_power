@@ -147,7 +147,9 @@ def setup_argument_parser():
     device_title.add_argument('--force-bandwidth', action='store_true',
                               help='ignore list of filter bandwidths provided by device and allow any value')
     device_title.add_argument('--tune-delay', metavar='SECONDS', type=float, default=0,
-                              help='time to delay measurement after changing frequency')
+                              help='time to delay measurement after changing frequency (to avoid artifacts)')
+    device_title.add_argument('--reset-stream', action='store_true',
+                              help='reset streaming after changing frequency (to avoid artifacts)')
 
     crop_title = parser.add_argument_group('Crop')
     crop_group = crop_title.add_mutually_exclusive_group()
@@ -269,7 +271,8 @@ def main():
         runs=args.runs, time_limit=args.elapsed, overlap=args.overlap, crop=args.crop,
         fft_window=args.fft_window, fft_overlap=args.fft_overlap / 100, log_scale=not args.linear,
         remove_dc=args.remove_dc, detrend=args.detrend if args.detrend != 'no' else None,
-        tune_delay=args.tune_delay, base_buffer_size=args.buffer_size, max_buffer_size=args.max_buffer_size,
+        tune_delay=args.tune_delay, reset_stream=args.reset_stream,
+        base_buffer_size=args.buffer_size, max_buffer_size=args.max_buffer_size,
         max_threads=args.max_threads, max_queue_size=args.max_queue_size
     )
 

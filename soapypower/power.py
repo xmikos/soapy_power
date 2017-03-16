@@ -46,6 +46,7 @@ class SoapyPower:
         self._bins = None
         self._repeats = None
         self._tune_delay = None
+        self._reset_stream = None
         self._psd = None
         self._writer = None
 
@@ -172,7 +173,7 @@ class SoapyPower:
 
     def setup(self, bins, repeats, base_buffer_size=0, max_buffer_size=0,
               fft_window='hann', fft_overlap=0.5, crop_factor=0, log_scale=True, remove_dc=False,
-              detrend=None, tune_delay=0, max_threads=0, max_queue_size=0):
+              detrend=None, tune_delay=0, reset_stream=False, max_threads=0, max_queue_size=0):
         """Prepare samples buffer and start streaming samples from device"""
         if self.device.is_streaming:
             self.device.stop_stream()
@@ -186,6 +187,7 @@ class SoapyPower:
             bins, repeats, self._base_buffer_size, self._max_buffer_size
         )
         self._tune_delay = tune_delay
+        self._reset_stream = reset_stream
         self._psd = psd.PSD(bins, self.device.sample_rate, fft_window=fft_window, fft_overlap=fft_overlap,
                             crop_factor=crop_factor, log_scale=log_scale, remove_dc=remove_dc, detrend=detrend,
                             max_threads=max_threads, max_queue_size=max_queue_size)
@@ -206,6 +208,7 @@ class SoapyPower:
         self._buffer_repeats = None
         self._buffer = None
         self._tune_delay = None
+        self._reset_stream = None
         self._psd = None
         self._writer = None
 
@@ -218,7 +221,18 @@ class SoapyPower:
         logger.debug('  Frequency hop: {:.2f} Hz'.format(freq))
         t_freq = time.time()
         if self.device.freq != freq:
+            # Deactivate streaming before tuning
+            if self._reset_stream:
+                self.device.device.deactivateStream(self.device._stream)
+
+            # Actually tune to new center frequency
             self.device.freq = freq
+
+            # Reactivate straming after tuning
+            if self._reset_stream:
+                self.device.device.activateStream(self.device._stream)
+
+            # Delay reading samples after tuning
             if self._tune_delay:
                 t_delay = time.time()
                 while True:
@@ -258,13 +272,13 @@ class SoapyPower:
 
     def sweep(self, min_freq, max_freq, bins, repeats, runs=0, time_limit=0, overlap=0,
               fft_window='hann', fft_overlap=0.5, crop=False, log_scale=True, remove_dc=False, detrend=None,
-              tune_delay=0, base_buffer_size=0, max_buffer_size=0, max_threads=0, max_queue_size=0):
+              tune_delay=0, reset_stream=False, base_buffer_size=0, max_buffer_size=0, max_threads=0, max_queue_size=0):
         """Sweep spectrum using frequency hopping"""
         self.setup(
             bins, repeats, base_buffer_size, max_buffer_size,
             fft_window=fft_window, fft_overlap=fft_overlap,
             crop_factor=overlap if crop else 0, log_scale=log_scale, remove_dc=remove_dc, detrend=detrend,
-            tune_delay=tune_delay, max_threads=max_threads, max_queue_size=max_queue_size
+            tune_delay=tune_delay, reset_stream=reset_stream, max_threads=max_threads, max_queue_size=max_queue_size
         )
 
         try:
