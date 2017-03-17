@@ -33,6 +33,7 @@ setup(
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
+        'Topic :: Scientific/Engineering',
         'Topic :: Communications :: Ham Radio',
         'Topic :: Utilities'
     ]
