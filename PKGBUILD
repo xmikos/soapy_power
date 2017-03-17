@@ -6,7 +6,7 @@ pkgdesc="Obtain power spectrum from SoapySDR devices (RTL-SDR, Airspy, SDRplay, 
 arch=('any')
 url="https://github.com/xmikos/soapy_power"
 license=('MIT')
-depends=('python' 'simplesoapy')
+depends=('python' 'python-numpy' 'simplesoapy' 'simplespectral')
 makedepends=('python-setuptools')
 optdepends=(
   'soapyrtlsdr-git: support for RTL-SDR (RTL2832U) dongles'
@@ -19,7 +19,8 @@ optdepends=(
   'soapyredpitaya-git: support for Red Pitaya'
   'soapyosmo-git: support for MiriSDR and RFSpace'
   'soapyremote-git: use any SoapySDR device remotely over network'
-  'python-pyfftw: faster FFT calculations with FFTW library'
+  'python-pyfftw: fastest FFT calculations with FFTW library'
+  'python-scipy: faster FFT calculations with scipy.fftpack library'
 )
 source=(https://github.com/xmikos/soapy_power/archive/v$pkgver.tar.gz)
 

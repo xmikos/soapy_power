@@ -11,21 +11,6 @@ re_float_with_multiplier = re.compile(r'(?P<num>[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+
 multipliers = {'k': 1e3, 'M': 1e6, 'G': 1e9, 'T': 1e12}
 
 
-def use_pyfftw():
-    """Import pyfftw (if it is available) and monkey patch numpy.fft"""
-    try:
-        import pyfftw
-        power.array_empty = pyfftw.empty_aligned
-        power.array_zeros = pyfftw.zeros_aligned
-        power.numpy.fft = pyfftw.interfaces.numpy_fft
-        power.psd.numpy.fft = pyfftw.interfaces.numpy_fft
-        power.psd.spectral.numpy.fft = pyfftw.interfaces.numpy_fft
-        pyfftw.interfaces.cache.enable()
-        pyfftw.interfaces.cache.set_keepalive_time(3600)
-    except ImportError:
-        logger.warning('pyfftw is not available, using numpy.fft instead')
-
-
 def float_with_multiplier(string):
     """Convert string with optional k, M, G, T multiplier to float"""
     match = re_float_with_multiplier.search(string)
@@ -171,12 +156,12 @@ def setup_argument_parser():
     fft_rules_group.add_argument('--pow2', action='store_true',
                                  help='use only powers of 2 as number of FFT bins')
 
-    perf_title.add_argument('--pyfftw', action='store_true',
-                            help='use pyfftw library instead of numpy.fft (should be faster)')
     perf_title.add_argument('--max-threads', metavar='NUM', type=int, default=0,
-                            help='maximum number of FFT threads (0 = auto, default: %(default)s)')
+                            help='maximum number of PSD threads (0 = auto, default: %(default)s)')
     perf_title.add_argument('--max-queue-size', metavar='NUM', type=int, default=0,
-                            help='maximum size of FFT work queue (-1 = unlimited, 0 = auto, default: %(default)s)')
+                            help='maximum size of PSD work queue (-1 = unlimited, 0 = auto, default: %(default)s)')
+    perf_title.add_argument('--no-pyfftw', action='store_true',
+                            help='don\'t use pyfftw library even if it is available (use scipy.fftpack or numpy.fft)'
 
     other_title = parser.add_argument_group('Other options')
     other_title.add_argument('-l', '--linear', action='store_true',
@@ -220,16 +205,11 @@ def main():
         sys.exit(0 if devices else 1)
 
     # Prepare arguments for SoapyPower
-    if args.pyfftw:
-        use_pyfftw()
+    if args.no_pyfftw:
+        power.psd.simplespectral.use_pyfftw = False
 
     if args.gain:
         args.gain /= 10
-
-    if args.fft_window in ('kaiser', 'tukey'):
-        if args.fft_window_param is None:
-            parser.error('argument --fft-window: --fft-window-param is required when using kaiser or tukey windows')
-        args.fft_window = (args.fft_window, args.fft_window_param)
 
     # Create SoapyPower instance
     sdr = power.SoapyPower(
@@ -271,6 +251,11 @@ def main():
 
     if args.time:
         args.repeats = sdr.time_to_repeats(args.bins, args.time)
+
+    if args.fft_window in ('kaiser', 'tukey'):
+        if args.fft_window_param is None:
+            parser.error('argument --fft-window: --fft-window-param is required when using kaiser or tukey windows')
+        args.fft_window = (args.fft_window, args.fft_window_param)
 
     # Start frequency sweep
     sdr.sweep(

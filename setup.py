@@ -19,8 +19,9 @@ setup(
         ],
     },
     install_requires=[
-        'scipy',
-        'simplesoapy'
+        'numpy',
+        'simplesoapy',
+        'simplespectral'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

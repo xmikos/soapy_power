@@ -2,14 +2,13 @@
 
 import sys, time, datetime, math, logging, signal
 
-import simplesoapy
 import numpy
+import simplesoapy
+from simplespectral import empty, zeros
 
 from soapypower import psd, writer
 
 logger = logging.getLogger(__name__)
-array_empty = numpy.empty
-array_zeros = numpy.zeros
 _shutdown = False
 
 
@@ -169,7 +168,7 @@ class SoapyPower:
         ))
         logger.info('buffer_repeats: {}'.format(buffer_repeats))
 
-        return (buffer_repeats, array_zeros(buffer_size, numpy.complex64))
+        return (buffer_repeats, zeros(buffer_size, numpy.complex64))
 
     def setup(self, bins, repeats, base_buffer_size=0, max_buffer_size=0,
               fft_window='hann', fft_overlap=0.5, crop_factor=0, log_scale=True, remove_dc=False,
@@ -264,7 +263,6 @@ class SoapyPower:
             self._psd.update_async(psd_state, numpy.copy(self._buffer))
 
             t_final = time.time()
-            logger.debug('      FFT time: {:.3f} s'.format(t_final - t_acq_end))
         psd_future = self._psd.result_async(psd_state)
         logger.debug('    Total hop time: {:.3f} s'.format(t_final - t_freq))
 

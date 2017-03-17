@@ -7,9 +7,14 @@ Requirements
 ------------
 
 - `Python 3 <https://www.python.org>`_
-- `SciPy <https://github.com/scipy/scipy>`_
+- `NumPy <http://www.numpy.org>`_
 - `SimpleSoapy <https://github.com/xmikos/simplesoapy>`_
-- Optional: `pyFFTW <https://github.com/pyFFTW/pyFFTW>`_ (for faster FFT calculations with FFTW library)
+- `SimpleSpectral <https://github.com/xmikos/simplespectral>`_
+- Optional: `pyFFTW <https://github.com/pyFFTW/pyFFTW>`_ (for fastest FFT calculations with FFTW library)
+- Optional: `SciPy <https://www.scipy.org>`_ (for faster FFT calculations with scipy.fftpack library)
+
+You should always install SciPy or pyFFTW, because numpy.fft has horrible
+memory usage and is also much slower.
 
 Usage
 -----
@@ -18,10 +23,10 @@ Usage
     usage: soapy_power [-h] [-f Hz|Hz:Hz] [-O FILE | --output-fd NUM] [-F {rtl_power,rtl_power_fftw,soapy_power_bin}] [-q]
                        [--debug] [--detect] [--version] [-b BINS | -B Hz] [-n REPEATS | -t SECONDS | -T SECONDS]
                        [-c | -u RUNS | -e SECONDS] [-d DEVICE] [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM]
-                       [-g 1/10th of dB | -a] [--force-rate] [--force-bandwidth] [--tune-delay SECONDS]
+                       [-g 1/10th of dB | -a] [--force-rate] [--force-bandwidth] [--tune-delay SECONDS] [--reset-stream]
                        [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE] [-S MAX_BUFFER_SIZE] [--even | --pow2] [--pyfftw]
-                       [--max-threads NUM] [--max-queue-size NUM] [-l] [-R] [-D {no,constant,linear}]
-                       [--fft-window {boxcar,hann,hamming,triang,blackman,bartlett,flattop,parzen,bohman,blackmanharris,nuttall,barthann}]
+                       [--max-threads NUM] [--max-queue-size NUM] [-l] [-R] [-D {none,constant}]
+                       [--fft-window {boxcar,hann,hamming,blackman,bartlett,kaiser,tukey}] [--fft-window-param FLOAT]
                        [--fft-overlap PERCENT]
     
     Obtain a power spectrum from SoapySDR devices
@@ -75,7 +80,8 @@ Usage
       -a, --agc             enable Automatic Gain Control (incompatible with -g)
       --force-rate          ignore list of sample rates provided by device and allow any value
       --force-bandwidth     ignore list of filter bandwidths provided by device and allow any value
-      --tune-delay SECONDS  time to delay measurement after changing frequency
+      --tune-delay SECONDS  time to delay measurement after changing frequency (to avoid artifacts)
+      --reset-stream        reset streaming after changing frequency (to avoid artifacts)
     
     Crop:
       -o PERCENT, --overlap PERCENT
@@ -90,20 +96,22 @@ Usage
                             maximum buffer size (number of samples, -1 = unlimited, 0 = auto, default: 0)
       --even                use only even numbers of FFT bins
       --pow2                use only powers of 2 as number of FFT bins
-      --pyfftw              use pyfftw library instead of scipy.fftpack (should be faster)
+      --pyfftw              use pyfftw library instead of numpy.fft (should be faster)
       --max-threads NUM     maximum number of FFT threads (0 = auto, default: 0)
       --max-queue-size NUM  maximum size of FFT work queue (-1 = unlimited, 0 = auto, default: 0)
     
     Other options:
       -l, --linear          linear power values instead of logarithmic
       -R, --remove-dc       interpolate central point to cancel DC bias (useful only with boxcar window)
-      -D {no,constant,linear}, --detrend {no,constant,linear}
-                            remove mean value or linear trend from data (default: no)
-      --fft-window {boxcar,hann,hamming,triang,blackman,bartlett,flattop,parzen,bohman,blackmanharris,nuttall,barthann}
+      -D {none,constant}, --detrend {none,constant}
+                            remove mean value from data to cancel DC bias (default: none)
+      --fft-window {boxcar,hann,hamming,blackman,bartlett,kaiser,tukey}
                             Welch's method window function (default: hann)
+      --fft-window-param FLOAT
+                            shape parameter of window function (required for kaiser and tukey windows)
       --fft-overlap PERCENT
                             Welch's method overlap between segments (default: 50)
-
+    
 Example
 -------
 ::
