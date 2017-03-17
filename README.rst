@@ -24,8 +24,8 @@ Usage
                        [--debug] [--detect] [--version] [-b BINS | -B Hz] [-n REPEATS | -t SECONDS | -T SECONDS]
                        [-c | -u RUNS | -e SECONDS] [-d DEVICE] [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM]
                        [-g 1/10th of dB | -a] [--force-rate] [--force-bandwidth] [--tune-delay SECONDS] [--reset-stream]
-                       [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE] [-S MAX_BUFFER_SIZE] [--even | --pow2] [--pyfftw]
-                       [--max-threads NUM] [--max-queue-size NUM] [-l] [-R] [-D {none,constant}]
+                       [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE] [-S MAX_BUFFER_SIZE] [--even | --pow2] [--max-threads NUM]
+                       [--max-queue-size NUM] [--no-pyfftw] [-l] [-R] [-D {none,constant}]
                        [--fft-window {boxcar,hann,hamming,blackman,bartlett,kaiser,tukey}] [--fft-window-param FLOAT]
                        [--fft-overlap PERCENT]
     
@@ -96,9 +96,9 @@ Usage
                             maximum buffer size (number of samples, -1 = unlimited, 0 = auto, default: 0)
       --even                use only even numbers of FFT bins
       --pow2                use only powers of 2 as number of FFT bins
-      --pyfftw              use pyfftw library instead of numpy.fft (should be faster)
-      --max-threads NUM     maximum number of FFT threads (0 = auto, default: 0)
-      --max-queue-size NUM  maximum size of FFT work queue (-1 = unlimited, 0 = auto, default: 0)
+      --max-threads NUM     maximum number of PSD threads (0 = auto, default: 0)
+      --max-queue-size NUM  maximum size of PSD work queue (-1 = unlimited, 0 = auto, default: 0)
+      --no-pyfftw           don't use pyfftw library even if it is available (use scipy.fftpack or numpy.fft)
     
     Other options:
       -l, --linear          linear power values instead of logarithmic

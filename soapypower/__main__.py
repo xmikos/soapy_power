@@ -3,7 +3,7 @@
 import os, sys, logging, argparse, re, shutil
 
 import simplesoapy
-from soapypower import power, writer
+from soapypower import writer
 from soapypower.version import __version__
 
 logger = logging.getLogger(__name__)
@@ -197,6 +197,9 @@ def main():
         level=log_level,
         format='%(levelname)s: %(message)s'
     )
+
+    # Import soapypower.power module only after setting log level
+    from soapypower import power
 
     # Detect SoapySDR devices
     if args.detect:
