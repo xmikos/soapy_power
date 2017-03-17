@@ -247,9 +247,6 @@ class SoapyPower:
         logger.debug('    Tune time: {:.3f} s'.format(t_freq_end - t_freq))
 
         for repeat in range(self._buffer_repeats):
-            if _shutdown:
-                break
-
             logger.debug('    Repeat: {}'.format(repeat + 1))
             # Read samples from SDR in main thread
             t_acq = time.time()
@@ -263,6 +260,10 @@ class SoapyPower:
             self._psd.update_async(psd_state, numpy.copy(self._buffer))
 
             t_final = time.time()
+
+            if _shutdown:
+                break
+
         psd_future = self._psd.result_async(psd_state)
         logger.debug('    Total hop time: {:.3f} s'.format(t_final - t_freq))
 
@@ -289,15 +290,15 @@ class SoapyPower:
                 logger.debug('Run: {}'.format(run))
 
                 for freq in freq_list:
-                    if _shutdown:
-                        break
-
                     # Tune to new frequency, acquire samples and compute Power Spectral Density
                     psd_future, acq_time_start, acq_time_stop = self.psd(freq)
 
                     # Write PSD to stdout (in another thread)
                     self._writer.write_async(psd_future, acq_time_start, acq_time_stop,
                                              len(self._buffer) * self._buffer_repeats)
+
+                    if _shutdown:
+                        break
 
                 # Write end of measurement marker (in another thread)
                 write_next_future = self._writer.write_next_async()

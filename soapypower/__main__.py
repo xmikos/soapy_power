@@ -161,7 +161,7 @@ def setup_argument_parser():
     perf_title.add_argument('--max-queue-size', metavar='NUM', type=int, default=0,
                             help='maximum size of PSD work queue (-1 = unlimited, 0 = auto, default: %(default)s)')
     perf_title.add_argument('--no-pyfftw', action='store_true',
-                            help='don\'t use pyfftw library even if it is available (use scipy.fftpack or numpy.fft)'
+                            help='don\'t use pyfftw library even if it is available (use scipy.fftpack or numpy.fft)')
 
     other_title = parser.add_argument_group('Other options')
     other_title.add_argument('-l', '--linear', action='store_true',
