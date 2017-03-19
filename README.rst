@@ -23,9 +23,9 @@ Usage
     usage: soapy_power [-h] [-f Hz|Hz:Hz] [-O FILE | --output-fd NUM] [-F {rtl_power,rtl_power_fftw,soapy_power_bin}] [-q]
                        [--debug] [--detect] [--version] [-b BINS | -B Hz] [-n REPEATS | -t SECONDS | -T SECONDS]
                        [-c | -u RUNS | -e SECONDS] [-d DEVICE] [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM]
-                       [-g 1/10th of dB | -a] [--force-rate] [--force-bandwidth] [--tune-delay SECONDS] [--reset-stream]
-                       [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE] [-S MAX_BUFFER_SIZE] [--even | --pow2] [--max-threads NUM]
-                       [--max-queue-size NUM] [--no-pyfftw] [-l] [-R] [-D {none,constant}]
+                       [-g 1/10th of dB | -a] [--lnb-lo Hz] [--force-rate] [--force-bandwidth] [--tune-delay SECONDS]
+                       [--reset-stream] [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE] [-S MAX_BUFFER_SIZE] [--even | --pow2]
+                       [--max-threads NUM] [--max-queue-size NUM] [--no-pyfftw] [-l] [-R] [-D {none,constant}]
                        [--fft-window {boxcar,hann,hamming,blackman,bartlett,kaiser,tukey}] [--fft-window-param FLOAT]
                        [--fft-overlap PERCENT]
     
@@ -78,6 +78,7 @@ Usage
       -g 1/10th of dB, --gain 1/10th of dB
                             gain, expressed in tenths of a decibel, e.g. 207 means 20.7 dB (incompatible with -a, default: 372)
       -a, --agc             enable Automatic Gain Control (incompatible with -g)
+      --lnb-lo Hz           LNB LO frequency, negative for upconverters (default: 0)
       --force-rate          ignore list of sample rates provided by device and allow any value
       --force-bandwidth     ignore list of filter bandwidths provided by device and allow any value
       --tune-delay SECONDS  time to delay measurement after changing frequency (to avoid artifacts)

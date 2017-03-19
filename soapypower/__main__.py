@@ -8,6 +8,7 @@ from soapypower.version import __version__
 
 logger = logging.getLogger(__name__)
 re_float_with_multiplier = re.compile(r'(?P<num>[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?)(?P<multi>[kMGT])?')
+re_float_with_multiplier_negative = re.compile(r'^(?P<num>-(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?)(?P<multi>[kMGT])?$')
 multipliers = {'k': 1e3, 'M': 1e6, 'G': 1e9, 'T': 1e12}
 
 
@@ -57,6 +58,9 @@ def setup_argument_parser():
         epilog=detect_devices()[1],
         add_help=False
     )
+
+    # Fix recognition of optional argements of type float_with_multiplier
+    parser._negative_number_matcher = re_float_with_multiplier_negative
 
     main_title = parser.add_argument_group('Main options')
     main_title.add_argument('-h', '--help', action='help',
@@ -128,6 +132,8 @@ def setup_argument_parser():
     gain_group.add_argument('-a', '--agc', action='store_true',
                             help='enable Automatic Gain Control (incompatible with -g)')
 
+    device_title.add_argument('--lnb-lo', metavar='Hz', type=float_with_multiplier, default=0,
+                              help='LNB LO frequency, negative for upconverters (default: %(default)s)')
     device_title.add_argument('--force-rate', action='store_true',
                               help='ignore list of sample rates provided by device and allow any value')
     device_title.add_argument('--force-bandwidth', action='store_true',
@@ -266,7 +272,7 @@ def main():
         runs=args.runs, time_limit=args.elapsed, overlap=args.overlap, crop=args.crop,
         fft_window=args.fft_window, fft_overlap=args.fft_overlap / 100, log_scale=not args.linear,
         remove_dc=args.remove_dc, detrend=args.detrend if args.detrend != 'none' else None,
-        tune_delay=args.tune_delay, reset_stream=args.reset_stream,
+        lnb_lo=args.lnb_lo, tune_delay=args.tune_delay, reset_stream=args.reset_stream,
         base_buffer_size=args.buffer_size, max_buffer_size=args.max_buffer_size,
         max_threads=args.max_threads, max_queue_size=args.max_queue_size
     )

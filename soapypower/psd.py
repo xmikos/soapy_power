@@ -14,7 +14,7 @@ class PSD:
     """Compute averaged power spectral density using Welch's method"""
     def __init__(self, bins, sample_rate, fft_window='hann', fft_overlap=0.5,
                  crop_factor=0, log_scale=True, remove_dc=False, detrend=None,
-                 max_threads=0, max_queue_size=0):
+                 lnb_lo=0, max_threads=0, max_queue_size=0):
         self._bins = bins
         self._sample_rate = sample_rate
         self._fft_window = fft_window
@@ -24,6 +24,7 @@ class PSD:
         self._log_scale = log_scale
         self._remove_dc = remove_dc
         self._detrend = detrend
+        self._lnb_lo = lnb_lo
         self._executor = threadpool.ThreadPoolExecutor(
             max_workers=max_threads,
             max_queue_size=max_queue_size,
@@ -35,7 +36,7 @@ class PSD:
         """Set center frequency and clear averaged PSD data"""
         psd_state = {
             'repeats': 0,
-            'freq_array': self._base_freq_array + center_freq,
+            'freq_array': self._base_freq_array + self._lnb_lo + center_freq,
             'pwr_array': None,
             'update_lock': threading.Lock(),
             'futures': [],

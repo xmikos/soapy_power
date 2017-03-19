@@ -170,9 +170,9 @@ class SoapyPower:
 
         return (buffer_repeats, zeros(buffer_size, numpy.complex64))
 
-    def setup(self, bins, repeats, base_buffer_size=0, max_buffer_size=0,
-              fft_window='hann', fft_overlap=0.5, crop_factor=0, log_scale=True, remove_dc=False,
-              detrend=None, tune_delay=0, reset_stream=False, max_threads=0, max_queue_size=0):
+    def setup(self, bins, repeats, base_buffer_size=0, max_buffer_size=0, fft_window='hann',
+              fft_overlap=0.5, crop_factor=0, log_scale=True, remove_dc=False, detrend=None,
+              lnb_lo=0, tune_delay=0, reset_stream=False, max_threads=0, max_queue_size=0):
         """Prepare samples buffer and start streaming samples from device"""
         if self.device.is_streaming:
             self.device.stop_stream()
@@ -189,7 +189,7 @@ class SoapyPower:
         self._reset_stream = reset_stream
         self._psd = psd.PSD(bins, self.device.sample_rate, fft_window=fft_window, fft_overlap=fft_overlap,
                             crop_factor=crop_factor, log_scale=log_scale, remove_dc=remove_dc, detrend=detrend,
-                            max_threads=max_threads, max_queue_size=max_queue_size)
+                            lnb_lo=lnb_lo, max_threads=max_threads, max_queue_size=max_queue_size)
         self._writer = writer.formats[self._output_format](self._output)
 
     def stop(self):
@@ -270,18 +270,18 @@ class SoapyPower:
         return (psd_future, acq_time_start, acq_time_stop)
 
     def sweep(self, min_freq, max_freq, bins, repeats, runs=0, time_limit=0, overlap=0,
-              fft_window='hann', fft_overlap=0.5, crop=False, log_scale=True, remove_dc=False, detrend=None,
+              fft_window='hann', fft_overlap=0.5, crop=False, log_scale=True, remove_dc=False, detrend=None, lnb_lo=0,
               tune_delay=0, reset_stream=False, base_buffer_size=0, max_buffer_size=0, max_threads=0, max_queue_size=0):
         """Sweep spectrum using frequency hopping"""
         self.setup(
             bins, repeats, base_buffer_size, max_buffer_size,
-            fft_window=fft_window, fft_overlap=fft_overlap,
-            crop_factor=overlap if crop else 0, log_scale=log_scale, remove_dc=remove_dc, detrend=detrend,
-            tune_delay=tune_delay, reset_stream=reset_stream, max_threads=max_threads, max_queue_size=max_queue_size
+            fft_window=fft_window, fft_overlap=fft_overlap, crop_factor=overlap if crop else 0,
+            log_scale=log_scale, remove_dc=remove_dc, detrend=detrend, lnb_lo=lnb_lo, tune_delay=tune_delay,
+            reset_stream=reset_stream, max_threads=max_threads, max_queue_size=max_queue_size
         )
 
         try:
-            freq_list = self.freq_plan(min_freq, max_freq, bins, overlap)
+            freq_list = self.freq_plan(min_freq - lnb_lo, max_freq - lnb_lo, bins, overlap)
             t_start = time.time()
             run = 0
             while not _shutdown and (runs == 0 or run < runs):
