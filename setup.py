@@ -20,7 +20,7 @@ setup(
     },
     install_requires=[
         'numpy',
-        'simplesoapy',
+        'simplesoapy>=1.2.0',
         'simplespectral'
     ],
     classifiers=[

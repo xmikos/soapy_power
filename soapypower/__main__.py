@@ -34,12 +34,12 @@ def freq_or_freq_range(string):
 
 
 def detect_devices():
-    devices = simplesoapy.detect_devices()
+    devices = simplesoapy.detect_devices(as_string=True)
     text = []
     text.append('Detected SoapySDR devices:')
     if devices:
         for i, d in enumerate(devices):
-            text.append('  device_id={}, driver={}, label={}'.format(i, d['driver'], d['label']))
+            text.append('  {}'.format(d))
     else:
         text.append('  No devices found')
     return (devices, '\n'.join(text))
