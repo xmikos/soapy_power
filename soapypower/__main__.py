@@ -33,16 +33,41 @@ def freq_or_freq_range(string):
     return [float_with_multiplier(f) for f in string.split(':')]
 
 
-def detect_devices():
-    devices = simplesoapy.detect_devices(as_string=True)
+def detect_devices(soapy_args=''):
+    """Returns detected SoapySDR devices"""
+    devices = simplesoapy.detect_devices(soapy_args, as_string=True)
     text = []
     text.append('Detected SoapySDR devices:')
     if devices:
         for i, d in enumerate(devices):
             text.append('  {}'.format(d))
     else:
-        text.append('  No devices found')
+        text.append('  No devices found!')
     return (devices, '\n'.join(text))
+
+
+def device_info(soapy_args=''):
+    """Returns info about selected SoapySDR device"""
+    text = []
+    try:
+        device = simplesoapy.SoapyDevice(soapy_args)
+        text.append('Selected device: {}'.format(device.hardware))
+        text.append('  Available RX channels:')
+        text.append('    {}'.format(', '.join(str(x) for x in device.list_channels())))
+        text.append('  Available antennas:')
+        text.append('    {}'.format(', '.join(device.list_antennas())))
+        text.append('  Available tunable elements:')
+        text.append('    {}'.format(', '.join(device.list_frequencies())))
+        text.append('  Available amplification elements:')
+        text.append('    {}'.format(', '.join(device.list_gains())))
+        text.append('  Allowed sample rates:')
+        text.append('    [{}] MHz'.format(', '.join('{:.2f}'.format(x / 1e6) for x in device.list_sample_rates())))
+        text.append('  Allowed bandwidths:')
+        text.append('    [{}] MHz'.format(', '.join('{:.2f}'.format(x / 1e6) for x in device.list_bandwidths())))
+    except RuntimeError:
+        device = None
+        text.append('No devices found!')
+    return (device, '\n'.join(text))
 
 
 def setup_argument_parser():
@@ -83,6 +108,8 @@ def setup_argument_parser():
                             help='detailed debugging messages')
     main_title.add_argument('--detect', action='store_true',
                             help='detect connected SoapySDR devices and exit')
+    main_title.add_argument('--info', action='store_true',
+                            help='show info about selected SoapySDR device and exit')
     main_title.add_argument('--version', action='version',
                             version='%(prog)s {}'.format(__version__))
 
@@ -209,9 +236,15 @@ def main():
 
     # Detect SoapySDR devices
     if args.detect:
-        devices, devices_text = detect_devices()
+        devices, devices_text = detect_devices(args.device)
         print(devices_text)
         sys.exit(0 if devices else 1)
+
+    # Show info about selected SoapySDR device
+    if args.info:
+        device, device_text = device_info(args.device)
+        print(device_text)
+        sys.exit(0 if device else 1)
 
     # Prepare arguments for SoapyPower
     if args.no_pyfftw:

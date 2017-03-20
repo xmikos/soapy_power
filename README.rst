@@ -21,7 +21,7 @@ Usage
 ::
 
     usage: soapy_power [-h] [-f Hz|Hz:Hz] [-O FILE | --output-fd NUM] [-F {rtl_power,rtl_power_fftw,soapy_power_bin}] [-q]
-                       [--debug] [--detect] [--version] [-b BINS | -B Hz] [-n REPEATS | -t SECONDS | -T SECONDS]
+                       [--debug] [--detect] [--info] [--version] [-b BINS | -B Hz] [-n REPEATS | -t SECONDS | -T SECONDS]
                        [-c | -u RUNS | -e SECONDS] [-d DEVICE] [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM]
                        [-g 1/10th of dB | -a] [--lnb-lo Hz] [--force-rate] [--force-bandwidth] [--tune-delay SECONDS]
                        [--reset-stream] [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE] [-S MAX_BUFFER_SIZE] [--even | --pow2]
@@ -44,6 +44,7 @@ Usage
       -q, --quiet           limit verbosity
       --debug               detailed debugging messages
       --detect              detect connected SoapySDR devices and exit
+      --info                show info about selected SoapySDR device and exit
       --version             show program's version number and exit
     
     FFT bins:
@@ -112,7 +113,7 @@ Usage
                             shape parameter of window function (required for kaiser and tukey windows)
       --fft-overlap PERCENT
                             Welch's method overlap between segments (default: 50)
-    
+
 Example
 -------
 ::
