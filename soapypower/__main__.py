@@ -92,7 +92,6 @@ def setup_argument_parser():
         prog='soapy_power',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='Obtain a power spectrum from SoapySDR devices',
-        epilog=detect_devices()[1],
         add_help=False
     )
 
