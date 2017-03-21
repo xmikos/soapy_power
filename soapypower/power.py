@@ -222,14 +222,14 @@ class SoapyPower:
         if self.device.freq != freq:
             # Deactivate streaming before tuning
             if self._reset_stream:
-                self.device.device.deactivateStream(self.device._stream)
+                self.device.device.deactivateStream(self.device.stream)
 
             # Actually tune to new center frequency
             self.device.freq = freq
 
             # Reactivate straming after tuning
             if self._reset_stream:
-                self.device.device.activateStream(self.device._stream)
+                self.device.device.activateStream(self.device.stream)
 
             # Delay reading samples after tuning
             if self._tune_delay:

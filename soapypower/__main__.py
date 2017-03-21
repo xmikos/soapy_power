@@ -33,6 +33,18 @@ def freq_or_freq_range(string):
     return [float_with_multiplier(f) for f in string.split(':')]
 
 
+def specific_gains(string):
+    """Convert string with gains of individual amplification elements to dict"""
+    if not string:
+        return {}
+
+    gains = {}
+    for gain in string.split(','):
+        amp_name, value = gain.split('=')
+        gains[amp_name.strip()] = float(value.strip())
+    return gains
+
+
 def detect_devices(soapy_args=''):
     """Returns detected SoapySDR devices"""
     devices = simplesoapy.detect_devices(soapy_args, as_string=True)
@@ -153,11 +165,13 @@ def setup_argument_parser():
                               help='frequency correction in ppm')
 
     gain_group = device_title.add_mutually_exclusive_group()
-    gain_group.add_argument('-g', '--gain', metavar='1/10th of dB', type=int, default=372,
-                            help='gain, expressed in tenths of a decibel, e.g. 207 means 20.7 dB '
-                                 '(incompatible with -a, default: %(default)s)')
+    gain_group.add_argument('-g', '--gain', metavar='dB', type=float, default=37.2,
+                            help='total gain (incompatible with -G and -a, default: %(default)s)')
+    gain_group.add_argument('-G', '--specific-gains', metavar='STRING', type=specific_gains, default='',
+                            help='specific gains of individual amplification elements '
+                                 '(incompatible with -g and -a, example: LNA=28,VGA=12,AMP=0')
     gain_group.add_argument('-a', '--agc', action='store_true',
-                            help='enable Automatic Gain Control (incompatible with -g)')
+                            help='enable Automatic Gain Control (incompatible with -g and -G)')
 
     device_title.add_argument('--lnb-lo', metavar='Hz', type=float_with_multiplier, default=0,
                               help='LNB LO frequency, negative for upconverters (default: %(default)s)')
@@ -250,13 +264,11 @@ def main():
     if args.no_pyfftw:
         power.psd.simplespectral.use_pyfftw = False
 
-    if args.gain:
-        args.gain /= 10
-
     # Create SoapyPower instance
     sdr = power.SoapyPower(
         soapy_args=args.device, sample_rate=args.rate, bandwidth=args.bandwidth, corr=args.ppm,
-        gain=args.gain, auto_gain=args.agc, channel=args.channel, antenna=args.antenna,
+        gain=args.specific_gains if args.specific_gains else args.gain, auto_gain=args.agc,
+        channel=args.channel, antenna=args.antenna,
         force_sample_rate=args.force_rate, force_bandwidth=args.force_bandwidth,
         output=args.output_fd if args.output_fd is not None else args.output,
         output_format=args.format

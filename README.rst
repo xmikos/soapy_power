@@ -23,7 +23,7 @@ Usage
     usage: soapy_power [-h] [-f Hz|Hz:Hz] [-O FILE | --output-fd NUM] [-F {rtl_power,rtl_power_fftw,soapy_power_bin}] [-q]
                        [--debug] [--detect] [--info] [--version] [-b BINS | -B Hz] [-n REPEATS | -t SECONDS | -T SECONDS]
                        [-c | -u RUNS | -e SECONDS] [-d DEVICE] [-C CHANNEL] [-A ANTENNA] [-r Hz] [-w Hz] [-p PPM]
-                       [-g 1/10th of dB | -a] [--lnb-lo Hz] [--force-rate] [--force-bandwidth] [--tune-delay SECONDS]
+                       [-g dB | -G STRING | -a] [--lnb-lo Hz] [--force-rate] [--force-bandwidth] [--tune-delay SECONDS]
                        [--reset-stream] [-o PERCENT | -k PERCENT] [-s BUFFER_SIZE] [-S MAX_BUFFER_SIZE] [--even | --pow2]
                        [--max-threads NUM] [--max-queue-size NUM] [--no-pyfftw] [-l] [-R] [-D {none,constant}]
                        [--fft-window {boxcar,hann,hamming,blackman,bartlett,kaiser,tukey}] [--fft-window-param FLOAT]
@@ -76,9 +76,11 @@ Usage
       -w Hz, --bandwidth Hz
                             filter bandwidth (default: 0)
       -p PPM, --ppm PPM     frequency correction in ppm
-      -g 1/10th of dB, --gain 1/10th of dB
-                            gain, expressed in tenths of a decibel, e.g. 207 means 20.7 dB (incompatible with -a, default: 372)
-      -a, --agc             enable Automatic Gain Control (incompatible with -g)
+      -g dB, --gain dB      total gain (incompatible with -G and -a, default: 37.2)
+      -G STRING, --specific-gains STRING
+                            specific gains of individual amplification elements (incompatible with -g and -a, example:
+                            LNA=28,VGA=12,AMP=0
+      -a, --agc             enable Automatic Gain Control (incompatible with -g and -G)
       --lnb-lo Hz           LNB LO frequency, negative for upconverters (default: 0)
       --force-rate          ignore list of sample rates provided by device and allow any value
       --force-bandwidth     ignore list of filter bandwidths provided by device and allow any value
