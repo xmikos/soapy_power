@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, sys, logging, argparse, re, shutil
+import os, sys, logging, argparse, re, shutil, textwrap
 
 import simplesoapy
 from soapypower import writer
@@ -45,6 +45,28 @@ def specific_gains(string):
     return gains
 
 
+def device_settings(string):
+    """Convert string with SoapySDR device settings to dict"""
+    if not string:
+        return {}
+
+    settings = {}
+    for setting in string.split(','):
+        setting_name, value = setting.split('=')
+        settings[setting_name.strip()] = value.strip()
+    return settings
+
+
+def wrap(text, indent='    '):
+    """Wrap text to terminal width with default indentation"""
+    wrapper = textwrap.TextWrapper(
+        width=int(os.environ.get('COLUMNS', 80)),
+        initial_indent=indent,
+        subsequent_indent=indent
+    )
+    return '\n'.join(wrapper.wrap(text))
+
+
 def detect_devices(soapy_args=''):
     """Returns detected SoapySDR devices"""
     devices = simplesoapy.detect_devices(soapy_args, as_string=True)
@@ -72,10 +94,13 @@ def device_info(soapy_args=''):
         text.append('    {}'.format(', '.join(device.list_frequencies())))
         text.append('  Available amplification elements:')
         text.append('    {}'.format(', '.join(device.list_gains())))
-        text.append('  Allowed sample rates:')
-        text.append('    [{}] MHz'.format(', '.join('{:.2f}'.format(x / 1e6) for x in device.list_sample_rates())))
-        text.append('  Allowed bandwidths:')
-        text.append('    [{}] MHz'.format(', '.join('{:.2f}'.format(x / 1e6) for x in device.list_bandwidths())))
+        text.append('  Available device settings:')
+        for key, s in device.list_settings().items():
+            text.append(wrap('{} ... {} - {} (default: {})'.format(key, s['name'], s['description'], s['value'])))
+        text.append('  Allowed sample rates [MHz]:')
+        text.append(wrap(', '.join('{:.2f}'.format(x / 1e6) for x in device.list_sample_rates())))
+        text.append('  Allowed bandwidths [MHz]:')
+        text.append(wrap(', '.join('{:.2f}'.format(x / 1e6) for x in device.list_bandwidths())))
     except RuntimeError:
         device = None
         text.append('No devices found!')
@@ -174,6 +199,8 @@ def setup_argument_parser():
 
     device_title.add_argument('--lnb-lo', metavar='Hz', type=float_with_multiplier, default=0,
                               help='LNB LO frequency, negative for upconverters (default: %(default)s)')
+    device_title.add_argument('--device-settings', metavar='STRING', type=device_settings, default='',
+                              help='SoapySDR device settings (example: biastee=true)')
     device_title.add_argument('--force-rate', action='store_true',
                               help='ignore list of sample rates provided by device and allow any value')
     device_title.add_argument('--force-bandwidth', action='store_true',
@@ -267,7 +294,7 @@ def main():
     sdr = power.SoapyPower(
         soapy_args=args.device, sample_rate=args.rate, bandwidth=args.bandwidth, corr=args.ppm,
         gain=args.specific_gains if args.specific_gains else args.gain, auto_gain=args.agc,
-        channel=args.channel, antenna=args.antenna,
+        channel=args.channel, antenna=args.antenna, settings=args.device_settings,
         force_sample_rate=args.force_rate, force_bandwidth=args.force_bandwidth,
         output=args.output_fd if args.output_fd is not None else args.output,
         output_format=args.format

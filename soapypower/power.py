@@ -26,12 +26,12 @@ signal.signal(signal.SIGINT, _shutdown_handler)
 class SoapyPower:
     """SoapySDR spectrum analyzer"""
     def __init__(self, soapy_args='', sample_rate=2.00e6, bandwidth=0, corr=0, gain=20.7,
-                 auto_gain=False, channel=0, antenna='',
+                 auto_gain=False, channel=0, antenna='', settings=None,
                  force_sample_rate=False, force_bandwidth=False,
                  output=sys.stdout, output_format='rtl_power'):
         self.device = simplesoapy.SoapyDevice(
             soapy_args=soapy_args, sample_rate=sample_rate, bandwidth=bandwidth, corr=corr,
-            gain=gain, auto_gain=auto_gain, channel=channel, antenna=antenna,
+            gain=gain, auto_gain=auto_gain, channel=channel, antenna=antenna, settings=settings,
             force_sample_rate=force_sample_rate, force_bandwidth=force_bandwidth
         )
 
