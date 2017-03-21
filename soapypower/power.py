@@ -22,6 +22,9 @@ def _shutdown_handler(sig, frame):
 signal.signal(signal.SIGTERM, _shutdown_handler)
 signal.signal(signal.SIGINT, _shutdown_handler)
 
+if sys.platform == 'win32':
+    signal.signal(signal.SIGBREAK, _shutdown_handler)
+
 
 class SoapyPower:
     """SoapySDR spectrum analyzer"""
