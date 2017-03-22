@@ -145,9 +145,8 @@ class SoapyPower:
         buffer_size = math.ceil(samples / base_buffer_size) * base_buffer_size
 
         if not max_buffer_size:
-            # Max buffer size about 250 MB (this gives us max. memory usage about 2.1 GB
-            # when not using pyfftw and about 3.6 GB if using pyfftw and 4 threads)
-            max_buffer_size = (250 * 1024**2) / 8
+            # Max buffer size about 100 MB
+            max_buffer_size = (100 * 1024**2) / 8
 
         if max_buffer_size > 0:
             max_buffer_size = math.ceil(max_buffer_size / base_buffer_size) * base_buffer_size
