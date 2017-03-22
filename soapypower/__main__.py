@@ -291,15 +291,18 @@ def main():
         power.psd.simplespectral.use_pyfftw = False
 
     # Create SoapyPower instance
-    sdr = power.SoapyPower(
-        soapy_args=args.device, sample_rate=args.rate, bandwidth=args.bandwidth, corr=args.ppm,
-        gain=args.specific_gains if args.specific_gains else args.gain, auto_gain=args.agc,
-        channel=args.channel, antenna=args.antenna, settings=args.device_settings,
-        force_sample_rate=args.force_rate, force_bandwidth=args.force_bandwidth,
-        output=args.output_fd if args.output_fd is not None else args.output,
-        output_format=args.format
-    )
-    logger.info('Using device: {}'.format(sdr.device.hardware))
+    try:
+        sdr = power.SoapyPower(
+            soapy_args=args.device, sample_rate=args.rate, bandwidth=args.bandwidth, corr=args.ppm,
+            gain=args.specific_gains if args.specific_gains else args.gain, auto_gain=args.agc,
+            channel=args.channel, antenna=args.antenna, settings=args.device_settings,
+            force_sample_rate=args.force_rate, force_bandwidth=args.force_bandwidth,
+            output=args.output_fd if args.output_fd is not None else args.output,
+            output_format=args.format
+        )
+        logger.info('Using device: {}'.format(sdr.device.hardware))
+    except RuntimeError:
+        parser.error('No devices found!')
 
     # Prepare arguments for SoapyPower.sweep()
     if len(args.freq) < 2:
