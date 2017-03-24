@@ -97,10 +97,26 @@ def device_info(soapy_args=''):
         text.append('  Available device settings:')
         for key, s in device.list_settings().items():
             text.append(wrap('{} ... {} - {} (default: {})'.format(key, s['name'], s['description'], s['value'])))
+        text.append('  Available stream arguments:')
+        for key, s in device.list_stream_args().items():
+            text.append(wrap('{} ... {} - {} (default: {})'.format(key, s['name'], s['description'], s['value'])))
+        text.append('  Allowed gain range [dB]:')
+        text.append('    {:.2f} - {:.2f}'.format(*device.get_gain_range()))
+        text.append('  Allowed frequency range [MHz]:')
+        text.append('    {:.2f} - {:.2f}'.format(*[x / 1e6 for x in device.get_frequency_range()]))
         text.append('  Allowed sample rates [MHz]:')
         text.append(wrap(', '.join('{:.2f}'.format(x / 1e6) for x in device.list_sample_rates())))
         text.append('  Allowed bandwidths [MHz]:')
-        text.append(wrap(', '.join('{:.2f}'.format(x / 1e6) for x in device.list_bandwidths())))
+        bandwidths = []
+        for b in device.list_bandwidths():
+            if b[0] == b[1]:
+                bandwidths.append('{:.2f}'.format(b[0] / 1e6))
+            else:
+                bandwidths.append('{:.2f} - {:.2f}'.format(b[0] / 1e6, b[1] / 1e6))
+        if bandwidths:
+            text.append(wrap(', '.join(bandwidths)))
+        else:
+            text.append('    N/A')
     except RuntimeError:
         device = None
         text.append('No devices found!')
