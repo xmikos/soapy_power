@@ -4,7 +4,7 @@ import sys, time, datetime, math, logging, signal
 
 import numpy
 import simplesoapy
-from simplespectral import empty, zeros
+from simplespectral import zeros
 
 from soapypower import psd, writer
 

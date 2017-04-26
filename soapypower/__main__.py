@@ -105,7 +105,13 @@ def device_info(soapy_args=''):
         text.append('  Allowed frequency range [MHz]:')
         text.append('    {:.2f} - {:.2f}'.format(*[x / 1e6 for x in device.get_frequency_range()]))
         text.append('  Allowed sample rates [MHz]:')
-        text.append(wrap(', '.join('{:.2f}'.format(x / 1e6) for x in device.list_sample_rates())))
+        rates = []
+        for r in device.list_sample_rates():
+            if r[0] == r[1]:
+                rates.append('{:.2f}'.format(r[0] / 1e6))
+            else:
+                rates.append('{:.2f} - {:.2f}'.format(r[0] / 1e6, r[1] / 1e6))
+        text.append(wrap(', '.join(rates)))
         text.append('  Allowed bandwidths [MHz]:')
         bandwidths = []
         for b in device.list_bandwidths():
